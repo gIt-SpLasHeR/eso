@@ -20,13 +20,15 @@ namespace FaceYourFace.Controllers
         }
 
         // GET: api/FaceYourFace/5
-        public async Task<string> Get(int groupId)
+        [HttpGet]
+        public async Task<bool> CheckPersonExist(string EnterpriseId)
         {
             FaceYourFaceService faceservice = new FaceYourFaceService();
             //var sync = await faceservice.AddPerson(groupId.ToString(),"jipeng.zhang");
             ////var str = await sync.Content.ReadAsStringAsync();
             //return sync.ToString();
-            return "1";
+            bool result = await faceservice.CheckPersonExist(EnterpriseId);
+            return result;
         }
 
         // POST: api/FaceYourFace

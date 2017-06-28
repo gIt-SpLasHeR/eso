@@ -1,5 +1,4 @@
-﻿using FaceYourFace.Models;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data.Entity;
 using System.Linq;
@@ -13,7 +12,6 @@ namespace FaceYourFace
     {
         protected void Application_Start()
         {
-            Database.SetInitializer<FaceYourFaceContext>(new DropCreateDatabaseIfModelChanges<FaceYourFaceContext>());
             GlobalConfiguration.Configure(WebApiConfig.Register);
         }
     }

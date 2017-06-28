@@ -1,6 +1,5 @@
 ﻿using FaceYourFace.Constants;
 using FaceYourFace.DTO;
-using FaceYourFace.EntityWork;
 using Microsoft.ProjectOxford.Face;
 using Microsoft.ProjectOxford.Face.Contract;
 using System;
@@ -21,7 +20,6 @@ namespace FaceYourFace.Services
         const int CallLimitPerSecond = 10;
         static Queue<DateTime> _timeStampQueue = new Queue<DateTime>(CallLimitPerSecond);
         FaceServiceClient faceServiceClient = new FaceServiceClient(ConstantsString.Key, ConstantsString.EndPoints);// apiroot means endpoints
-        FaceYourFaceEntity faceEntity = new FaceYourFaceEntity();
         public static async Task WaitCallLimitPerSecondAsync()
         {
             Monitor.Enter(_timeStampQueue);
@@ -65,35 +63,42 @@ namespace FaceYourFace.Services
             string personGroupName = GroupID;
             string personName = eid;
             bool success = false;
-            PersonResultItem person = faceEntity.GetPerson(eid);
-            if (person.EnterpriseID == null)// 
+            //PersonResultItem person = faceEntity.GetPerson(eid);
+            //if (person.EnterpriseID == null)// 
+            //{
+            //    _timeStampQueue.Enqueue(DateTime.UtcNow);
+            //    //CreatePersonResult person = new CreatePersonResult();
+            //    var syncPersonResult = await faceServiceClient.CreatePersonAsync(personGroupId, personName);
+            //    //add
+            //    person.EnterpriseID = eid;
+            //    person.PersonGroupId = ConstantsString.GroupId;
+            //    person.PersonId = syncPersonResult.PersonId;
+            //    faceEntity.InsertPerson(person);
+            //}
+            PersonResultItem person = new PersonResultItem();        
+            person.EnterpriseID = eid;
+            var personList = await faceServiceClient.ListPersonsAsync(ConstantsString.GroupId);
+            var responsePerson = personList.FirstOrDefault(t => t.Name == eid);
+            if (responsePerson != null)
             {
-                _timeStampQueue.Enqueue(DateTime.UtcNow);
-                //CreatePersonResult person = new CreatePersonResult();
-                var syncPersonResult = await faceServiceClient.CreatePersonAsync(personGroupId, personName);
-                //add
-                person.EnterpriseID = eid;
-                person.PersonGroupId = ConstantsString.GroupId;
-                person.PersonId = syncPersonResult.PersonId;
-                faceEntity.InsertPerson(person);
-            }
-            try
-            {
-                foreach (var faceStream in FaceStreamList)
+                person.PersonId = responsePerson.PersonId;
+                try
                 {
-                    //Stream face = new MemoryStream(faceStream);
-
-                    await WaitCallLimitPerSecondAsync();
-                    AddPersistedFaceResult result = await faceServiceClient.AddPersonFaceAsync(person.PersonGroupId, person.PersonId, faceStream);
-                    success = result.PersistedFaceId != Guid.Empty;
-                    //person.PersonFaceId = new List<Guid>();
-                    //person.PersonFaceId.Add(result.PersistedFaceId);
+                    foreach (var faceStream in FaceStreamList)
+                    {
+                        //Stream face = new MemoryStream(faceStream);
+                        await WaitCallLimitPerSecondAsync();
+                        AddPersistedFaceResult result = await faceServiceClient.AddPersonFaceAsync(ConstantsString.GroupId, person.PersonId, faceStream);
+                        success = result.PersistedFaceId != Guid.Empty;
+                        //person.PersonFaceId = new List<Guid>();
+                        //person.PersonFaceId.Add(result.PersistedFaceId);
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
+                catch (Exception ex)
+                {
 
-                throw ex;
+                    throw ex;
+                }
             }
             //add face to db
             //var insertResult = faceEntity.InsertPersonFace(person);
@@ -107,7 +112,15 @@ namespace FaceYourFace.Services
             //from db.userinfo
             //where db.userinfo.EnterpriseID = eid
             //select new PersonItem { EnterpriseID, PersonGroupId, UserData, PersonId, PersonFaceId }
-            PersonResultItem person = faceEntity.GetPerson(EnterpriseId);
+            PersonResultItem person = new PersonResultItem();
+            var personList = await faceServiceClient.ListPersonsAsync(ConstantsString.GroupId);
+            var responsePerson = personList.FirstOrDefault(t => t.Name == EnterpriseId);
+            if (responsePerson != null)
+            {
+                person.EnterpriseID = EnterpriseId;
+                person.PersonId = responsePerson.PersonId;
+                person.PersonGroupId = ConstantsString.GroupId;
+            }
             //faceServiceClient.VerifyAsync(Guid facei, ConstantsString.GroupId, personId);
             //Stream FaceStream = new MemoryStream(FaceStreamList.FirstOrDefault());
             Face[] TobeFace = await faceServiceClient.DetectAsync(FaceStream, returnFaceLandmarks:false, returnFaceAttributes:null);
@@ -115,6 +128,13 @@ namespace FaceYourFace.Services
             VerifyResult result = await faceServiceClient.VerifyAsync(FaceTobeVerify, ConstantsString.GroupId, person.PersonId);
             IsVerified = (result.IsIdentical || result.Confidence > 0.5) ? true : false;
             return result;
+        }
+
+        public async Task<bool> CheckPersonExist(string EnterpriseId)
+        {
+            Person[] PersonList = await faceServiceClient.ListPersonsAsync(ConstantsString.GroupId);
+            bool exist = PersonList.Any(t => t.Name == EnterpriseId);
+            return exist;
         }
     }
 }
