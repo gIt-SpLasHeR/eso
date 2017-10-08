@@ -58,33 +58,55 @@ namespace FaceYourFace.Controllers
 
         // POST: api/FaceYourFace
         [HttpPost]
-        public async Task<string> AddPerson(string EnterpriseId, HttpRequestMessage request)
+        public async Task<string> AddPerson(string EnterpriseId)
         {
             FaceYourFaceService faceservice = new FaceYourFaceService();
+            Stream stream;
             //string personImageDir = @"/Image/"+ EnterpriseId;
             List<Stream> FaceStreamList = new List<Stream>();
-            Stream stream = await request.Content.ReadAsStreamAsync();
-            stream.Position = 0;
-            FaceStreamList.Add(stream);
-            //foreach (string imagePath in Directory.GetFiles(personImageDir, "*.jpg"))
-            //{
-            //    using (Stream stream = File.OpenRead(imagePath))
-            //    {
-            //        byte[] bytes = new byte[stream.Length];
-            //        stream.Read(bytes, 0, bytes.Length);
-            //        stream.Seek(0, SeekOrigin.Begin);
-            //        FaceStreamList.Add(bytes);
-            //    }
-            //}
+            if (Request.Content.IsMimeMultipartContent() || Request.Content.Headers.ContentType.MediaType == "multipart/form-data")
+            {
+                var streamProvider = new MultipartMemoryStreamProvider();
+                var formstream = await Request.Content.ReadAsMultipartAsync();
+                var imgList = formstream.Contents;
+                foreach (var img in imgList)
+                {
+                    stream = await img.ReadAsStreamAsync();
+                    stream.Position = 0;
+                    FaceStreamList.Add(stream);
+                }
+            }
+            else
+            {
+                stream = await Request.Content.ReadAsStreamAsync();
+                stream.Position = 0;
+                FaceStreamList.Add(stream);
+            }
+            
             var sync = await faceservice.AddPerson(ConstantsString.GroupId, EnterpriseId, FaceStreamList);
             return sync.ToString();
         }
         [HttpPost]
-        public async Task<VerifyResult> VerifyPerson(string EnterpriseId, HttpRequestMessage request)
+        public async Task<VerifyResult> VerifyPerson(string EnterpriseId)
         {
             FaceYourFaceService faceservice = new FaceYourFaceService();
-            Stream stream = await request.Content.ReadAsStreamAsync();
-            stream.Position = 0;
+            Stream stream = Stream.Null;
+
+            if (Request.Content.IsMimeMultipartContent() || Request.Content.Headers.ContentType.MediaType == "multipart/form-data")
+            {
+                var streamProvider = new MultipartMemoryStreamProvider();
+                var formstream = await Request.Content.ReadAsMultipartAsync();
+                var imgList = formstream.Contents;
+                foreach (var img in imgList)
+                {
+                    stream = await img.ReadAsStreamAsync();
+                    stream.Position = 0;
+                }
+            }
+            else {
+                stream = await Request.Content.ReadAsStreamAsync();
+                stream.Position = 0;
+            }
             var sync = await faceservice.VerifyFace(EnterpriseId, stream);
             return sync;
         }
@@ -93,6 +115,7 @@ namespace FaceYourFace.Controllers
         public async Task<HttpResponseMessage> MakeCreateGroupRequest(string personGroupId)
         {
             var client = new HttpClient();
+            personGroupId = ConstantsString.GroupId; // we will only use 5 as a default person group.
             client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", ConstantsString.Key);
             string uri = ConstantsString.EndPoints + "/persongroups/" + personGroupId;
             // Here "name" is for display and doesn't have to be unique. Also, "userData" is optional.

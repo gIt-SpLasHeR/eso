@@ -79,6 +79,7 @@ namespace FaceYourFace.Services
         public async Task<VerifyResult> VerifyFace(string EnterpriseId, Stream FaceStream)
         {
             bool IsVerified = false;
+            VerifyResult result = new VerifyResult { Confidence = 0.0, IsIdentical = false };
             PersonResultItem person = new PersonResultItem
             {
                 EnterpriseID = EnterpriseId,
@@ -94,9 +95,12 @@ namespace FaceYourFace.Services
             }
 
             Face[] TobeFace = await faceServiceClient.DetectAsync(FaceStream, returnFaceLandmarks: false, returnFaceAttributes: null);
-            Guid FaceTobeVerify = TobeFace.FirstOrDefault().FaceId;
-            VerifyResult result = await faceServiceClient.VerifyAsync(FaceTobeVerify, ConstantsString.GroupId, person.PersonId);
-            IsVerified = (result.IsIdentical || result.Confidence > 0.5) ? true : false;
+            if ( TobeFace != null && TobeFace.Count() > 0)
+            {
+                Guid FaceTobeVerify = TobeFace.FirstOrDefault().FaceId;
+                result = await faceServiceClient.VerifyAsync(FaceTobeVerify, ConstantsString.GroupId, person.PersonId);
+                IsVerified = (result.IsIdentical || result.Confidence > 0.5) ? true : false; 
+            }
             return result;
         }
 
