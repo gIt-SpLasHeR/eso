@@ -47,30 +47,38 @@ namespace FaceYourFace.Services
             bool success = false;
             PersonResultItem person = new PersonResultItem { EnterpriseID = eid, PersonGroupId = GroupID };
 
-            var personList = await faceServiceClient.ListPersonsAsync(ConstantsString.GroupId);
-            var responsePerson = personList.FirstOrDefault(t => t.Name == eid);
-            if (responsePerson != null)
+            try
             {
-                person.PersonId = responsePerson.PersonId;
-            }
-            else
-            {
-                CreatePersonResult result = await faceServiceClient.CreatePersonAsync(person.PersonGroupId, person.EnterpriseID);
-                person.PersonId = result.PersonId;
-            }
-
-            if (person.PersonId != Guid.Empty)
-            {
-                foreach (var faceStream in FaceStreamList)
+                var personList = await faceServiceClient.ListPersonsAsync(ConstantsString.GroupId);
+                var responsePerson = personList.FirstOrDefault(t => t.Name == eid);
+                if (responsePerson != null)
                 {
-                    await WaitCallLimitPerSecondAsync();
-                    AddPersistedFaceResult result = await faceServiceClient.AddPersonFaceAsync(ConstantsString.GroupId, person.PersonId, faceStream);
-                    success = result.PersistedFaceId != Guid.Empty;
+                    person.PersonId = responsePerson.PersonId;
+                }
+                else
+                {
+                    CreatePersonResult result = await faceServiceClient.CreatePersonAsync(person.PersonGroupId, person.EnterpriseID);
+                    person.PersonId = result.PersonId;
+                }
+
+                if (person.PersonId != Guid.Empty)
+                {
+                    foreach (var faceStream in FaceStreamList)
+                    {
+                        await WaitCallLimitPerSecondAsync();
+                        AddPersistedFaceResult result = await faceServiceClient.AddPersonFaceAsync(ConstantsString.GroupId, person.PersonId, faceStream);
+                        success = result.PersistedFaceId != Guid.Empty;
+                    }
+                }
+                else
+                {
+                    success = false;
                 }
             }
-            else
+            catch (Exception ex)
             {
-                success = false;
+
+                throw ex;
             }
 
             return success;

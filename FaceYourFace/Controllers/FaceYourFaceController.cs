@@ -1,6 +1,7 @@
 ﻿using FaceYourFace.Constants;
 using FaceYourFace.Services;
 using Microsoft.ProjectOxford.Face.Contract;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -60,31 +61,31 @@ namespace FaceYourFace.Controllers
         [HttpPost]
         public async Task<string> AddPerson(string EnterpriseId)
         {
-            FaceYourFaceService faceservice = new FaceYourFaceService();
-            Stream stream;
-            //string personImageDir = @"/Image/"+ EnterpriseId;
-            List<Stream> FaceStreamList = new List<Stream>();
-            if (Request.Content.IsMimeMultipartContent() || Request.Content.Headers.ContentType.MediaType == "multipart/form-data")
-            {
-                var streamProvider = new MultipartMemoryStreamProvider();
-                var formstream = await Request.Content.ReadAsMultipartAsync();
-                var imgList = formstream.Contents;
-                foreach (var img in imgList)
+                FaceYourFaceService faceservice = new FaceYourFaceService();
+                Stream stream;
+                //string personImageDir = @"/Image/"+ EnterpriseId;
+                List<Stream> FaceStreamList = new List<Stream>();
+                if (Request.Content.IsMimeMultipartContent() || Request.Content.Headers.ContentType.MediaType == "multipart/form-data")
                 {
-                    stream = await img.ReadAsStreamAsync();
+                    var streamProvider = new MultipartMemoryStreamProvider();
+                    var formstream = await Request.Content.ReadAsMultipartAsync();
+                    var imgList = formstream.Contents;
+                    foreach (var img in imgList)
+                    {
+                        stream = await img.ReadAsStreamAsync();
+                        stream.Position = 0;
+                        FaceStreamList.Add(stream);
+                    }
+                }
+                else
+                {
+                    stream = await Request.Content.ReadAsStreamAsync();
                     stream.Position = 0;
                     FaceStreamList.Add(stream);
                 }
-            }
-            else
-            {
-                stream = await Request.Content.ReadAsStreamAsync();
-                stream.Position = 0;
-                FaceStreamList.Add(stream);
-            }
-            
-            var sync = await faceservice.AddPerson(ConstantsString.GroupId, EnterpriseId, FaceStreamList);
-            return sync.ToString();
+
+                var sync = await faceservice.AddPerson(ConstantsString.GroupId, EnterpriseId, FaceStreamList);
+                return sync.ToString();       
         }
         [HttpPost]
         public async Task<VerifyResult> VerifyPerson(string EnterpriseId)

@@ -23,7 +23,7 @@ namespace FaceYourFace
             );
             GlobalConfiguration.Configuration.Formatters.Clear();
             GlobalConfiguration.Configuration.Formatters.Add(new JsonMediaTypeFormatter());
-            
+            config.Filters.Add(new NotImplExceptionFilterAttribute());
         }
         private static void EnableCrossSiteRequests(HttpConfiguration config)
         {
